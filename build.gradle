@@ -1,0 +1,131 @@
+buildscript {
+    repositories {
+        mavenCentral()
+        jcenter()
+        maven { url "https://dl.bintray.com/jetbrains/kotlin-native-dependencies" }
+    }
+    dependencies {
+        classpath "com.moowork.gradle:gradle-node-plugin:$gradle_node_version"
+        classpath "com.jfrog.bintray.gradle:gradle-bintray-plugin:$bintray_plugin_version"
+    }
+}
+
+plugins {
+    id 'kotlin-multiplatform'
+}
+
+repositories {
+    mavenCentral()
+}
+
+apply plugin: 'maven-publish'
+
+kotlin {
+    targets {
+        fromPreset(presets.jvm, 'jvm6') {
+            compilations.all {
+                tasks[compileKotlinTaskName].kotlinOptions {
+                    jvmTarget = '1.6'
+                }
+            }
+        }
+        fromPreset(presets.jvm, 'jvm8') {
+            compilations.all {
+                tasks[compileKotlinTaskName].kotlinOptions {
+                    jvmTarget = '1.8'
+                }
+            }
+        }
+        fromPreset(presets.iosX64, 'ios') {
+            compilations.main.outputKinds('FRAMEWORK')
+        }
+        fromPreset(presets.js, 'js') {
+            compilations.all {
+                tasks[compileKotlinTaskName].kotlinOptions {
+                    moduleKind = "umd"
+                    sourceMap = true
+                    metaInfo = true
+                }
+            }
+        }
+        fromPreset(presets.mingwX64, 'windows')
+        fromPreset(presets.macosX64, 'macos')
+        fromPreset(presets.linuxX64, 'linux')
+        all {
+            compilations.all {
+                tasks[compileKotlinTaskName].kotlinOptions {
+                    allWarningsAsErrors = true
+                }
+            }
+        }
+    }
+
+    sourceSets {
+        commonMain {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-stdlib-common'
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-test-common'
+                implementation 'org.jetbrains.kotlin:kotlin-test-annotations-common'
+            }
+        }
+
+        jvm6Main {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-stdlib'
+            }
+        }
+        jvm6Test {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-test'
+                implementation 'org.jetbrains.kotlin:kotlin-test-junit'
+            }
+        }
+
+        jvm8Main {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-stdlib-jdk8'
+            }
+        }
+        jvm8Test {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-test'
+                implementation 'org.jetbrains.kotlin:kotlin-test-junit'
+            }
+        }
+
+        jsMain {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-stdlib-js'
+            }
+        }
+        jsTest {
+            dependencies {
+                implementation 'org.jetbrains.kotlin:kotlin-test-js'
+            }
+        }
+
+        configure([iosMain, windowsMain, macosMain, linuxMain]) {
+        }
+        configure([iosTest, windowsTest, macosTest, linuxTest]) {
+        }
+    }
+}
+
+tasks.withType(Test) {
+    testLogging {
+        exceptionFormat "short"
+        afterSuite { desc, result ->
+            if (!desc.parent) { // Match the outermost suite.
+                println("${result.resultType} (${result.testCount} tests, ${result.successfulTestCount} passed, ${result.failedTestCount} failed, ${result.skippedTestCount} skipped)")
+            }
+        }
+    }
+}
+
+apply from: rootProject.file('gradle/node-js.gradle')
+apply from: rootProject.file('gradle/test-mocha-js.gradle')
+//apply from: rootProject.file('gradle/publish.gradle')

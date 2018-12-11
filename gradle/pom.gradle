@@ -1,0 +1,31 @@
+def pomConfig = {
+    licenses {
+        license {
+            name "The Apache Software License, Version 2.0"
+            url "http://www.apache.org/licenses/LICENSE-2.0.txt"
+            distribution "repo"
+        }
+    }
+    developers {
+        developer {
+            id "Doist"
+            name "Doist Team"
+            organization "Doist"
+            organizationUrl "https://doist.com"
+        }
+    }
+
+    scm {
+        url vcs
+    }
+}
+
+project.ext.configureMavenCentralMetadata = { pom ->
+    def root = asNode()
+    root.appendNode('name', project.name)
+    root.appendNode('description', project.description)
+    root.appendNode('url', project.vcs)
+    root.children().last() + pomConfig
+}
+
+project.ext.configurePom = pomConfig
