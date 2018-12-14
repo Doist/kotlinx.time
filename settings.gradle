@@ -16,6 +16,6 @@ pluginManagement {
     }
 }
 
-rootProject.name = 'kotlinx-time'
+rootProject.name = 'kotlinx.time'
 
 enableFeaturePreview('GRADLE_METADATA')
