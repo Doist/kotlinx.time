@@ -79,11 +79,6 @@ import kotlin.test.assertSame
  */
 class TestDuration {
     @Test
-    fun test_immutable() {
-//        assertFalse(Duration::class.isOpen)
-    }
-
-    @Test
     fun plus_zeroReturnsThis() {
         val t = Duration.ofSeconds(-1)
         assertSame(t.plus(Duration.ZERO), t)
