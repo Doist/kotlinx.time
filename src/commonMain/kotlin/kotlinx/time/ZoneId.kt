@@ -68,8 +68,115 @@
  */
 package kotlinx.time
 
-class ZoneId {
-    companion object {
+abstract class ZoneId internal constructor() {
+    abstract val id: String
 
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is ZoneId) return false
+        return id == other.id
+    }
+
+    override fun hashCode() = id.hashCode()
+
+    override fun toString() = id
+
+    companion object {
+        val SHORT_IDS = mapOf(
+            "ACT" to "Australia/Darwin",
+            "AET" to "Australia/Sydney",
+            "AGT" to "America/Argentina/Buenos_Aires",
+            "ART" to "Africa/Cairo",
+            "AST" to "America/Anchorage",
+            "BET" to "America/Sao_Paulo",
+            "BST" to "Asia/Dhaka",
+            "CAT" to "Africa/Harare",
+            "CNT" to "America/St_Johns",
+            "CST" to "America/Chicago",
+            "CTT" to "Asia/Shanghai",
+            "EAT" to "Africa/Addis_Ababa",
+            "ECT" to "Europe/Paris",
+            "IET" to "America/Indiana/Indianapolis",
+            "IST" to "Asia/Kolkata",
+            "JST" to "Asia/Tokyo",
+            "MIT" to "Pacific/Apia",
+            "NET" to "Asia/Yerevan",
+            "NST" to "Pacific/Auckland",
+            "PLT" to "Asia/Karachi",
+            "PNT" to "America/Phoenix",
+            "PRT" to "America/Puerto_Rico",
+            "PST" to "America/Los_Angeles",
+            "SST" to "Pacific/Guadalcanal",
+            "VST" to "Asia/Ho_Chi_Minh",
+            // XXX: This will likely break non-Java implementations.
+            "EST" to "-05:00",
+            "MST" to "-07:00",
+            "HST" to "-10:00"
+        )
+
+        fun systemDefault() = of(getActualTimeZoneId(), SHORT_IDS)
+
+        fun getAvailableZoneIds() = getActualAvailableTimeZoneIds()
+
+        fun of(zoneId: String, aliasMap: Map<String, String>) = of(aliasMap.getOrElse(zoneId) { zoneId })
+
+        fun of(zoneId: String) = of(zoneId, true)
+
+        fun ofOffset(prefix: String, offset: ZoneOffset): ZoneId {
+            return if (prefix.isEmpty()) {
+                return offset
+            } else if (prefix != "GMT" && prefix != "UTC" && prefix != "UT") {
+                throw IllegalArgumentException("prefix should be GMT, UTC or UT, is: $prefix")
+            } else if (offset.totalSeconds != 0) {
+                ZoneRegion("$prefix${offset.id}")
+            } else {
+                ZoneRegion(prefix)
+            }
+        }
+
+        fun of(prefix: String, offset: ZoneOffset): ZoneId {
+            return if (prefix.isEmpty()) {
+                return offset
+            } else if (prefix != "GMT" && prefix != "UTC" && prefix != "UT") {
+                throw IllegalArgumentException("prefix should be GMT, UTC or UT, is: $prefix")
+            } else if (offset.totalSeconds != 0) {
+                ZoneRegion("$prefix${offset.id}")
+            } else {
+                ZoneRegion(prefix)
+            }
+        }
+
+        fun of(zoneId: String, checkAvailable: Boolean): ZoneId {
+            return if (zoneId.length <= 1 || zoneId.startsWith('+') || zoneId.startsWith('-')) {
+                ZoneOffset.of(zoneId)
+            } else if (zoneId.startsWith("UTC") || zoneId.startsWith("GMT")) {
+                ofWithPrefix(zoneId, 3, checkAvailable)
+            } else if (zoneId.startsWith("UT")) {
+                ofWithPrefix(zoneId, 2, checkAvailable)
+            } else {
+                ZoneRegion.ofId(zoneId, checkAvailable)
+            }
+        }
+
+        private fun ofWithPrefix(zoneId: String, prefixLength: Int, checkAvailable: Boolean): ZoneId {
+            val prefix = zoneId.substring(0, prefixLength)
+            if (zoneId.length == prefixLength) {
+                return ofOffset(prefix, ZoneOffset.UTC)
+            }
+            if (zoneId[prefixLength] != '+' && zoneId[prefixLength] != '-') {
+                return ZoneRegion.ofId(zoneId, checkAvailable)  // drop through to ZoneRulesProvider
+            }
+            try {
+                val offset = ZoneOffset.of(zoneId.substring(prefixLength))
+                return ofOffset(prefix, offset)
+            } catch (ex: DateTimeException) {
+                throw DateTimeException("Invalid ID for offset-based ZoneId: $zoneId", ex)
+            }
+
+        }
     }
 }
+
+expect fun getActualTimeZoneId(): String
+
+expect fun getActualAvailableTimeZoneIds(): Set<String>
