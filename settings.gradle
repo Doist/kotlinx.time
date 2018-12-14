@@ -4,6 +4,9 @@ pluginManagement {
             if (requested.id.id == "kotlin-multiplatform") {
                 useModule("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
             }
+            if (requested.id.id == "org.jetbrains.kotlin.frontend") {
+                useModule("org.jetbrains.kotlin:kotlin-frontend-plugin:$kotlin_frontend_version")
+            }
         }
     }
 

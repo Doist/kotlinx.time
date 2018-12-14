@@ -12,6 +12,7 @@ buildscript {
 
 plugins {
     id 'kotlin-multiplatform'
+    id 'org.jetbrains.kotlin.frontend'
 }
 
 repositories {
@@ -112,6 +113,12 @@ kotlin {
         }
         configure([iosTest, windowsTest, macosTest, linuxTest]) {
         }
+    }
+}
+
+kotlinFrontend {
+    npm {
+        dependency("moment-timezone", "$moment_timezone_version")
     }
 }
 
