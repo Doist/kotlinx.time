@@ -1,8 +1,8 @@
 buildscript {
     repositories {
         mavenCentral()
-        jcenter()
         maven { url "https://dl.bintray.com/jetbrains/kotlin-native-dependencies" }
+        jcenter()
     }
     dependencies {
         classpath "com.moowork.gradle:gradle-node-plugin:$gradle_node_version"
@@ -133,6 +133,7 @@ tasks.withType(Test) {
     }
 }
 
-apply from: rootProject.file('gradle/node-js.gradle')
-apply from: rootProject.file('gradle/test-mocha-js.gradle')
+apply from: rootProject.file('gradle/js-node.gradle')
+apply from: rootProject.file('gradle/js-test-mocha.gradle')
+apply from: rootProject.file('gradle/windows-tz.gradle')
 //apply from: rootProject.file('gradle/publish.gradle')

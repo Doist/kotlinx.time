@@ -1,0 +1,55 @@
+import java.util.regex.Pattern
+
+task windowsTzMap(type: Task) {
+    def inFile = new File("$buildDir/windowsZones.xml")
+    def outFile = new File("${kotlin.sourceSets.windowsMain.kotlin.srcDirs[0]}/windowsZones.kt")
+
+    // Download time zone map if the file is absent.
+    if (!inFile.exists()) {
+        inFile.withOutputStream { os ->
+            new URL("https://unicode.org/repos/cldr/trunk/common/supplemental/windowsZones.xml").withInputStream { is ->
+                os << is
+            }
+        }
+    }
+
+    // Create Kotlin Windows->IANA time zone map.
+    def tzMap = [:]
+    def pattern = Pattern.compile("mapZone other=\"([^\"]+)\" territory=\"([^\"]+)\" type=\"([^\"]+)")
+    def lines = inFile.readLines()
+    lines.each { line ->
+        def matcher = pattern.matcher(line)
+        if (matcher.find()) {
+            def territoryMap = tzMap.get(matcher.group(1), [:])
+            territoryMap[matcher.group(2)] = matcher.group(3)
+            tzMap[matcher.group(1)] = territoryMap
+        }
+    }
+
+    // Write time zone map.
+    outFile.withWriter { writer ->
+        writer << "// Windows->IANA map. Each Windows zone has one or more territories, which point to a IANA zone.\n"
+        writer << "val windowsZones = mapOf(\n"
+        tzMap.eachWithIndex { windowsZone, territoryMap, i ->
+            writer << "    \"$windowsZone\" to mapOf(\n"
+            def nonGoldenTerritoryMap = territoryMap.findAll { it.key != "001" }
+            nonGoldenTerritoryMap.eachWithIndex { territory, ianaZoneStr, j ->
+                def ianaZones = ianaZoneStr.tokenize()
+                ianaZones.eachWithIndex { ianaZone, k ->
+                    writer << "        \"$territory"
+                    if (k > 0) {
+                        writer << k + 1
+                    }
+                    writer << "\" to \"$ianaZone\""
+                    writer << (j == nonGoldenTerritoryMap.size() - 1 && k == ianaZones.size() - 1 ? "\n" : ",\n")
+                }
+            }
+            def goldenIanaZone = territoryMap.find { it.key == "001" }.value
+            writer << "    ).withDefault {\n        \"$goldenIanaZone\"\n    }"
+            writer << (i < tzMap.size() - 1 ? ",\n" : "\n")
+        }
+        writer << ")\n"
+    }
+}
+
+compileKotlinWindows.dependsOn windowsTzMap
