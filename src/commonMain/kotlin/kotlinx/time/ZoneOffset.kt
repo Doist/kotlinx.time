@@ -4,6 +4,7 @@ import kotlinx.time.LocalTime.Companion.MINUTES_PER_HOUR
 import kotlinx.time.LocalTime.Companion.SECONDS_PER_HOUR
 import kotlinx.time.LocalTime.Companion.SECONDS_PER_MINUTE
 import kotlin.math.abs
+import kotlin.native.ThreadLocal
 
 class ZoneOffset private constructor(val totalSeconds: Int) : ZoneId(), Comparable<ZoneOffset> {
     override val id = buildId(totalSeconds)
@@ -23,6 +24,7 @@ class ZoneOffset private constructor(val totalSeconds: Int) : ZoneId(), Comparab
 
     override fun toString() = id
 
+    @ThreadLocal
     companion object {
         private val SECONDS_CACHE = mutableMapOf<Int, ZoneOffset>()
         private val ID_CACHE = mutableMapOf<String, ZoneOffset>()
