@@ -90,127 +90,6 @@ import multiplyExact
  * See that class for additional documentation.
  */
 class Duration private constructor(val seconds: Long, val nanos: Int) : Comparable<Duration> {
-    companion object {
-        val ZERO = Duration(0, 0)
-
-        private val PATTERN = Regex(
-            "([-+]?)P(?:([-+]?[0-9]+)D)?" +
-                    "(T(?:([-+]?[0-9]+)H)?(?:([-+]?[0-9]+)M)?(?:([-+]?[0-9]+)(?:[.,]([0-9]{0,9}))?S)?)?",
-            RegexOption.IGNORE_CASE
-        )
-
-        fun ofDays(days: Long): Duration = create(multiplyExact(days, SECONDS_PER_DAY), 0)
-
-        fun ofHours(hours: Long): Duration = create(multiplyExact(hours, SECONDS_PER_HOUR), 0)
-
-        fun ofMinutes(minutes: Long): Duration = create(multiplyExact(minutes, SECONDS_PER_MINUTE), 0)
-
-        fun ofSeconds(seconds: Long): Duration = create(seconds, 0)
-
-        fun ofSeconds(seconds: Long, nanoAdjustment: Long): Duration {
-            val secs = addExact(seconds, floorDiv(nanoAdjustment, NANOS_PER_SECOND))
-            val nos = floorMod(nanoAdjustment, NANOS_PER_SECOND).toInt()
-            return create(secs, nos)
-        }
-
-        fun ofMillis(millis: Long): Duration {
-            var secs = millis / MILLIS_PER_SECOND
-            var mos = millis % MILLIS_PER_SECOND
-            if (mos < 0) {
-                mos += MILLIS_PER_SECOND
-                secs--
-            }
-            return create(secs, (mos * NANOS_PER_MILLI).toInt())
-        }
-
-        fun ofNanos(nanos: Long): Duration {
-            var secs = nanos / NANOS_PER_SECOND
-            var nos = nanos % NANOS_PER_SECOND
-            if (nos < 0) {
-                nos += NANOS_PER_SECOND
-                secs--
-            }
-            return create(secs, nos.toInt())
-        }
-
-        fun parse(text: CharSequence): Duration {
-            val result = PATTERN.matchEntire(text)
-            if (result != null) {
-                // Check for letter T but no time sections.
-                if (result.groupValues[3] != "T") {
-
-                    val (negateMatch, dayMatch, _, hourMatch, minMatch, secMatch, fractionMatch) = result.destructured
-                    if (dayMatch.isNotEmpty() || hourMatch.isNotEmpty()
-                        || minMatch.isNotEmpty() || secMatch.isNotEmpty()
-                    ) {
-                        val negate = negateMatch == "-"
-                        val daysAsSecs = parseNumber(text, dayMatch, SECONDS_PER_DAY, "days")
-                        val hoursAsSecs = parseNumber(text, hourMatch, SECONDS_PER_HOUR, "hours")
-                        val minsAsSecs = parseNumber(text, minMatch, SECONDS_PER_MINUTE, "minutes")
-                        val seconds = parseNumber(text, secMatch, 1, "seconds")
-                        val negativeSeconds = secMatch.getOrNull(0) == '-'
-                        val nanos = parseFraction(text, fractionMatch, if (negativeSeconds) -1 else 1)
-                        try {
-                            return create(negate, daysAsSecs, hoursAsSecs, minsAsSecs, seconds, nanos)
-                        } catch (ex: ArithmeticException) {
-                            throw DateTimeParseException("Text cannot be parsed to a Duration: overflow", text, 0, ex)
-                        }
-                    }
-                }
-            }
-            throw DateTimeParseException("Text cannot be parsed to a Duration", text, 0)
-        }
-
-        private fun parseNumber(text: CharSequence, parsed: String, multiplier: Int, errorText: String): Long {
-            // regex limits to [-+]?[0-9]+
-            if (parsed.isEmpty()) {
-                return 0
-            }
-            try {
-                val value = parsed.toLong()
-                return multiplyExact(value, multiplier)
-            } catch (ex: NumberFormatException) {
-                throw DateTimeParseException("Text cannot be parsed to a Duration: $errorText", text, 0, ex)
-            } catch (ex: ArithmeticException) {
-                throw DateTimeParseException("Text cannot be parsed to a Duration: $errorText", text, 0, ex)
-            }
-        }
-
-        private fun parseFraction(text: CharSequence, parsed: String, negate: Int): Int {
-            // regex limits to [0-9]{0,9}
-            if (parsed.isEmpty()) {
-                return 0
-            }
-            try {
-                val value = parsed.padEnd(9, '0')
-                return value.toInt() * negate
-            } catch (ex: NumberFormatException) {
-                throw DateTimeParseException("Text cannot be parsed to a Duration: fraction", text, 0, ex)
-            } catch (ex: ArithmeticException) {
-                throw DateTimeParseException("Text cannot be parsed to a Duration: fraction", text, 0, ex)
-            }
-
-        }
-
-        private fun create(
-            negate: Boolean, daysAsSecs: Long, hoursAsSecs: Long, minsAsSecs: Long, secs: Long, nanos: Int
-        ): Duration {
-            val seconds = addExact(daysAsSecs, addExact(hoursAsSecs, addExact(minsAsSecs, secs)))
-            return if (negate) {
-                -ofSeconds(seconds, nanos.toLong())
-            } else {
-                ofSeconds(seconds, nanos.toLong())
-            }
-        }
-
-        fun create(seconds: Long, nanoAdjustment: Int): Duration {
-            if (seconds == 0L && nanoAdjustment == 0) {
-                return ZERO
-            }
-            return Duration(seconds, nanoAdjustment)
-        }
-    }
-
     val isZero get() = (seconds or nanos.toLong()) == 0L
 
     val isNegative get() = seconds < 0
@@ -371,7 +250,7 @@ class Duration private constructor(val seconds: Long, val nanos: Int) : Comparab
 
     override fun equals(other: Any?): Boolean {
         if (this === other) return true
-        if (other == null || other !is Duration) return false
+        if (other !is Duration) return false
         return seconds == other.seconds && nanos == other.nanos
     }
 
@@ -418,5 +297,126 @@ class Duration private constructor(val seconds: Long, val nanos: Int) : Comparab
         }
         buf.append('S')
         return buf.toString()
+    }
+
+    companion object {
+        val ZERO = Duration(0, 0)
+
+        private val PATTERN = Regex(
+            "([-+]?)P(?:([-+]?[0-9]+)D)?" +
+                    "(T(?:([-+]?[0-9]+)H)?(?:([-+]?[0-9]+)M)?(?:([-+]?[0-9]+)(?:[.,]([0-9]{0,9}))?S)?)?",
+            RegexOption.IGNORE_CASE
+        )
+
+        fun ofDays(days: Long): Duration = create(multiplyExact(days, SECONDS_PER_DAY), 0)
+
+        fun ofHours(hours: Long): Duration = create(multiplyExact(hours, SECONDS_PER_HOUR), 0)
+
+        fun ofMinutes(minutes: Long): Duration = create(multiplyExact(minutes, SECONDS_PER_MINUTE), 0)
+
+        fun ofSeconds(seconds: Long): Duration = create(seconds, 0)
+
+        fun ofSeconds(seconds: Long, nanoAdjustment: Long): Duration {
+            val secs = addExact(seconds, floorDiv(nanoAdjustment, NANOS_PER_SECOND))
+            val nos = floorMod(nanoAdjustment, NANOS_PER_SECOND).toInt()
+            return create(secs, nos)
+        }
+
+        fun ofMillis(millis: Long): Duration {
+            var secs = millis / MILLIS_PER_SECOND
+            var mos = millis % MILLIS_PER_SECOND
+            if (mos < 0) {
+                mos += MILLIS_PER_SECOND
+                secs--
+            }
+            return create(secs, (mos * NANOS_PER_MILLI).toInt())
+        }
+
+        fun ofNanos(nanos: Long): Duration {
+            var secs = nanos / NANOS_PER_SECOND
+            var nos = nanos % NANOS_PER_SECOND
+            if (nos < 0) {
+                nos += NANOS_PER_SECOND
+                secs--
+            }
+            return create(secs, nos.toInt())
+        }
+
+        fun parse(text: CharSequence): Duration {
+            val result = PATTERN.matchEntire(text)
+            if (result != null) {
+                // Check for letter T but no time sections.
+                if (result.groupValues[3] != "T") {
+
+                    val (negateMatch, dayMatch, _, hourMatch, minMatch, secMatch, fractionMatch) = result.destructured
+                    if (dayMatch.isNotEmpty() || hourMatch.isNotEmpty()
+                        || minMatch.isNotEmpty() || secMatch.isNotEmpty()
+                    ) {
+                        val negate = negateMatch == "-"
+                        val daysAsSecs = parseNumber(text, dayMatch, SECONDS_PER_DAY, "days")
+                        val hoursAsSecs = parseNumber(text, hourMatch, SECONDS_PER_HOUR, "hours")
+                        val minsAsSecs = parseNumber(text, minMatch, SECONDS_PER_MINUTE, "minutes")
+                        val seconds = parseNumber(text, secMatch, 1, "seconds")
+                        val negativeSeconds = secMatch.getOrNull(0) == '-'
+                        val nanos = parseFraction(text, fractionMatch, if (negativeSeconds) -1 else 1)
+                        try {
+                            return create(negate, daysAsSecs, hoursAsSecs, minsAsSecs, seconds, nanos)
+                        } catch (ex: ArithmeticException) {
+                            throw DateTimeParseException("Text cannot be parsed to a Duration: overflow", text, 0, ex)
+                        }
+                    }
+                }
+            }
+            throw DateTimeParseException("Text cannot be parsed to a Duration", text, 0)
+        }
+
+        private fun parseNumber(text: CharSequence, parsed: String, multiplier: Int, errorText: String): Long {
+            // regex limits to [-+]?[0-9]+
+            if (parsed.isEmpty()) {
+                return 0
+            }
+            try {
+                val value = parsed.toLong()
+                return multiplyExact(value, multiplier)
+            } catch (ex: NumberFormatException) {
+                throw DateTimeParseException("Text cannot be parsed to a Duration: $errorText", text, 0, ex)
+            } catch (ex: ArithmeticException) {
+                throw DateTimeParseException("Text cannot be parsed to a Duration: $errorText", text, 0, ex)
+            }
+        }
+
+        private fun parseFraction(text: CharSequence, parsed: String, negate: Int): Int {
+            // regex limits to [0-9]{0,9}
+            if (parsed.isEmpty()) {
+                return 0
+            }
+            try {
+                val value = parsed.padEnd(9, '0')
+                return value.toInt() * negate
+            } catch (ex: NumberFormatException) {
+                throw DateTimeParseException("Text cannot be parsed to a Duration: fraction", text, 0, ex)
+            } catch (ex: ArithmeticException) {
+                throw DateTimeParseException("Text cannot be parsed to a Duration: fraction", text, 0, ex)
+            }
+
+        }
+
+        private fun create(
+            negate: Boolean, daysAsSecs: Long, hoursAsSecs: Long, minsAsSecs: Long, secs: Long, nanos: Int
+        ): Duration {
+            val seconds = addExact(daysAsSecs, addExact(hoursAsSecs, addExact(minsAsSecs, secs)))
+            return if (negate) {
+                -ofSeconds(seconds, nanos.toLong())
+            } else {
+                ofSeconds(seconds, nanos.toLong())
+            }
+        }
+
+        fun create(seconds: Long, nanoAdjustment: Int): Duration {
+            if (seconds == 0L && nanoAdjustment == 0) {
+                return ZERO
+            }
+            return Duration(seconds, nanoAdjustment)
+        }
     }
 }
