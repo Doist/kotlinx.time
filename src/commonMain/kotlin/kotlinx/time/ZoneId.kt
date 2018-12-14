@@ -114,9 +114,9 @@ abstract class ZoneId internal constructor() {
             "HST" to "-10:00"
         )
 
-        fun systemDefault() = of(getActualTimeZoneId(), SHORT_IDS)
+        fun systemDefault() = of(getPlatformCurrentTimeZoneId(), SHORT_IDS)
 
-        fun getAvailableZoneIds() = getActualAvailableTimeZoneIds()
+        fun getAvailableZoneIds() = getPlatformAvailableTimeZoneIds()
 
         fun of(zoneId: String, aliasMap: Map<String, String>) = of(aliasMap.getOrElse(zoneId) { zoneId })
 
@@ -177,6 +177,6 @@ abstract class ZoneId internal constructor() {
     }
 }
 
-expect fun getActualTimeZoneId(): String
+expect fun getPlatformCurrentTimeZoneId(): String
 
-expect fun getActualAvailableTimeZoneIds(): Set<String>
+expect fun getPlatformAvailableTimeZoneIds(): Set<String>

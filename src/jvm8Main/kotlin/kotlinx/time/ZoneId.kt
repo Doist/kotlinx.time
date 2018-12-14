@@ -2,6 +2,6 @@ package kotlinx.time
 
 import java.util.*
 
-actual fun getActualTimeZoneId(): String = TimeZone.getDefault().id
+actual fun getPlatformCurrentTimeZoneId(): String = TimeZone.getDefault().id
 
-actual fun getActualAvailableTimeZoneIds(): Set<String> = setOf(*TimeZone.getAvailableIDs())
+actual fun getPlatformAvailableTimeZoneIds(): Set<String> = setOf(*TimeZone.getAvailableIDs())

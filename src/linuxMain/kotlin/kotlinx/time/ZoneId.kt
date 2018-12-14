@@ -25,10 +25,10 @@ private val zonePath =
         path.takeIf { access(it, R_OK) == 0 }
     } ?: "/etc/localtime"
 
-actual fun getActualTimeZoneId() =
+actual fun getPlatformCurrentTimeZoneId() =
     realpath(zonePath, null)?.toKString()?.replace(zoneInfoPath, "") ?: "GMT"
 
-actual fun getActualAvailableTimeZoneIds() = listDir(zoneInfoPath)
+actual fun getPlatformAvailableTimeZoneIds() = listDir(zoneInfoPath)
 
 private fun listDir(fileName: String, prefix: String? = null): Set<String> {
     val dir = opendir(fileName) ?: return emptySet()
